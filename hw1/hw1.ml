@@ -77,11 +77,26 @@ let rec (powerset : 'a list -> 'a list list) =
 (* Problem 2 *)
         
 let (partition : ('a -> bool) -> 'a list -> 'a list * 'a list) =
-    raise ImplementMe
+    fun pred lst ->
+        match lst with
+        | [] -> ([], [])
+        | h::t ->
+                let rec helper orig l1 l2 =
+                    match orig with
+                    | [] -> (l1, l2)
+                    | h::t ->
+                            if pred h then helper t (l1 @ [h]) l2
+                            else helper t l1 (l2 @ [h])
+                in
+                helper lst [] []
 
-let (whle : ('a -> bool) -> ('a -> 'a) -> 'a -> 'a) =
-    raise ImplementMe
-                                    
-let (pow : int -> ('a -> 'a) -> ('a -> 'a)) =
-    raise ImplementMe
-                     
+let rec (whle : ('a -> bool) -> ('a -> 'a) -> 'a -> 'a) =
+    fun p f x ->
+        if p x then whle p f (f x)
+        else x
+
+let rec (pow : int -> ('a -> 'a) -> ('a -> 'a)) =
+    fun n f ->
+        match n with
+        | 0 -> (function x -> x)
+        | i -> (function x -> f ((pow (i - 1) f) x))
