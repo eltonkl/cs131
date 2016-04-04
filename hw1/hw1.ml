@@ -75,20 +75,18 @@ let rec (powerset : 'a list -> 'a list list) =
         setify ([[]] @ helper s)
 
 (* Problem 2 *)
-        
-let (partition : ('a -> bool) -> 'a list -> 'a list * 'a list) =
+
+let rec (partition : ('a -> bool) -> 'a list -> 'a list * 'a list) =
     fun pred lst ->
         match lst with
         | [] -> ([], [])
         | h::t ->
-                let rec helper orig l1 l2 =
-                    match orig with
-                    | [] -> (l1, l2)
-                    | h::t ->
-                            if pred h then helper t (l1 @ [h]) l2
-                            else helper t l1 (l2 @ [h])
-                in
-                helper lst [] []
+                if pred h then
+                    let (res1, res2) = partition pred t in
+                    ([h] @ res1, res2)
+                else
+                    let (res1, res2) = partition pred t in
+                    (res1, [h] @ res2)
 
 let rec (whle : ('a -> bool) -> ('a -> 'a) -> 'a -> 'a) =
     fun p f x ->
