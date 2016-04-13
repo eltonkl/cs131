@@ -39,4 +39,7 @@ let test =
     else
 
     let temp = powerset [1;2;3] in
-    if false then failwith "Test not implemented"
+    if not (List.mem [] temp && List.mem [1] temp && List.mem [2] temp &&
+            List.mem [3] temp && List.mem [1;2] temp && List.mem [1;3] temp &&
+            List.mem [2;3] temp && List.mem [1;2;3] temp)
+    then failwith "powerset doesn't work"
