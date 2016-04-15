@@ -81,6 +81,7 @@ let rec (evalExp : exp -> float) =
 (* a type for stack instructions *)	  
 type instr = Push of float | Swap | Calculate of op
 
+(* Helper function for swapping first two elements of a list *)
 let swapFirstTwo lst =
     let tail = List.tl lst in
     [List.hd tail; List.hd lst] @ List.tl tail
@@ -88,6 +89,8 @@ let swapFirstTwo lst =
 let (execute : instr list -> float) =
     fun il ->
         let rec helper =
+            (* where s is the "stack", and ilst is the instruction list *)
+            (* the first element of s is the top of the stack *)
             fun s ilst ->
                 match ilst with
                 | [] -> s
@@ -97,6 +100,7 @@ let (execute : instr list -> float) =
                         | Swap -> helper (swapFirstTwo s) t
                         | Calculate o ->
                                 let tail = List.tl s in
+                                (* evaluation order is exp2 op exp1 *)
                                 let r = evalExp (BinOp (Num (List.hd tail), o, Num (List.hd s))) in
                                 helper (r::(List.tl tail)) t
         in
@@ -126,6 +130,21 @@ let (decompile : instr list -> exp) =
         List.hd (helper [] il)
 
 (* EXTRA CREDIT *)        
-let (compileOpt : exp -> (instr list * int)) =
-  raise ImplementMe
-
+let rec (compileOpt : exp -> (instr list * int)) =
+    fun e ->
+        match e with
+        | Num f -> ([Push f], 1)
+        | BinOp (e1, o, e2) ->
+                let (il1, sz1) = compileOpt e1 in
+                let (il2, sz2) = compileOpt e2 in
+                (* We only compile the right operand first if it requires
+                 * more stack space than s1 *)
+                if sz2 > sz1 then
+                    match o with
+                    (* Only swap for non-commutative operations *)
+                    | Minus | Divide ->
+                            (il2 @ il1 @ [Swap; Calculate o], 1 + sz1)
+                    | _ ->
+                            (il2 @ il1 @ [Calculate o], 1 + sz1)
+                else
+                    (il1 @ il2 @ [Calculate o], sz1 + sz2)
