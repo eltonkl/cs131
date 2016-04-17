@@ -50,9 +50,9 @@ let (mmult : matrix -> matrix -> matrix) =
          * to calculate individual entries in the result matrix. *)
         let t2 = transpose m2 in
         (* For every row in matrix 1, *)
-        List.mapi
+        List.map
         (
-            fun r v1 ->
+            fun v1 ->
                 (* collect the dot products of the row with 
                  * every column in matrix 2 into a vector. *)
                 List.map

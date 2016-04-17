@@ -1,5 +1,8 @@
 (* Resources used: material from CS 131 discussion 1B
  * and from lecture *)
+(* People I talked to:
+    * Shalini Dangi
+    * Neda Vesselinova *)
 
 exception ImplementMe
 
@@ -50,29 +53,10 @@ let rec (setify : 'a list -> 'a list) =
 
 let rec (powerset : 'a list -> 'a list list) =
     fun s ->
-        let rec merge l ll =
-            match ll with
-            | [] -> l
-            | h::t -> merge (l @ h) t
-        in
-        let rec remove x s =
-            match s with
-            | [] -> []
-            | h::t ->
-                    if h = x then t
-                    else h::(remove x t)
-        in
-        let n_minus_one_subsets s =
-            List.map (function x -> remove x s) s
-        in
-        let rec helper l =
-            match l with
-            | [] -> []
-            | h::t ->
-                    let subsets = n_minus_one_subsets l in
-                    (merge [l] (List.map helper subsets))
-        in
-        setify ([[]] @ helper s)
+        match s with
+        | [] -> [[]]
+        | h::t -> let pst = powerset t in
+        (List.map (fun x -> h::x) (pst)) @ pst
 
 (* Problem 2 *)
 
