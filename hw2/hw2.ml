@@ -83,8 +83,9 @@ type instr = Push of float | Swap | Calculate of op
 
 (* Helper function for swapping first two elements of a list *)
 let swapFirstTwo lst =
-    let tail = List.tl lst in
-    [List.hd tail; List.hd lst] @ List.tl tail
+    match lst with
+    | h1::h2::t -> h2::h1::t
+    | _ -> failwith "List does not have at least two elements"
 
 let (execute : instr list -> float) =
     fun il ->
