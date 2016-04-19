@@ -147,4 +147,4 @@ let rec (compileOpt : exp -> (instr list * int)) =
                     | _ ->
                             (il2 @ il1 @ [Calculate o], 1 + sz1)
                 else
-                    (il1 @ il2 @ [Calculate o], sz1 + sz2)
+                    (il1 @ il2 @ [Calculate o], 1 + sz2)
