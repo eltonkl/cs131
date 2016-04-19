@@ -92,20 +92,17 @@ let (execute : instr list -> float) =
         let rec helper =
             (* where s is the "stack", and ilst is the instruction list *)
             (* the first element of s is the top of the stack *)
-            fun s ilst ->
-                match ilst with
-                | [] -> s
-                | h::t ->
-                        match h with
-                        | Push f -> helper (f::s) t
-                        | Swap -> helper (swapFirstTwo s) t
-                        | Calculate o ->
-                                let tail = List.tl s in
-                                (* evaluation order is exp2 op exp1 *)
-                                let r = evalExp (BinOp (Num (List.hd tail), o, Num (List.hd s))) in
-                                helper (r::(List.tl tail)) t
+            fun s i ->
+                match i with
+                | Push f -> f::s
+                | Swap -> swapFirstTwo s
+                | Calculate o ->
+                        let tail = List.tl s in
+                        (* evaluation order is exp2 op exp1 *)
+                        let r = evalExp (BinOp (Num (List.hd tail), o, Num (List.hd s))) in
+                        (r::(List.tl tail))
         in
-        List.hd (helper [] il)
+        List.hd (List.fold_left helper [] il)
 
 let rec (compile : exp -> instr list) =
     fun e ->
@@ -116,19 +113,16 @@ let rec (compile : exp -> instr list) =
 let (decompile : instr list -> exp) =
     fun il ->
         let rec helper =
-            fun elst ilst ->
-                match ilst with
-                | [] -> elst
-                | h::t ->
-                        match h with
-                        | Push f -> helper ([Num f] @ elst) t
-                        | Swap -> helper (swapFirstTwo elst) t
-                        | Calculate o ->
-                                let tail = List.tl elst in
-                                let exp = (BinOp (List.hd tail, o, List.hd elst)) in
-                                helper (exp::(List.tl tail)) t
+            fun elst i ->
+                match i with
+                | Push f -> (Num f)::elst
+                | Swap -> swapFirstTwo elst
+                | Calculate o ->
+                        let tail = List.tl elst in
+                        let exp = (BinOp (List.hd tail, o, List.hd elst)) in
+                        exp::(List.tl tail)
         in
-        List.hd (helper [] il)
+        List.hd (List.fold_left helper [] il)
 
 (* EXTRA CREDIT *)        
 let rec (compileOpt : exp -> (instr list * int)) =
