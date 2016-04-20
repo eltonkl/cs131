@@ -115,10 +115,10 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
                 match mval1 with
                 | FunctionVal(name, mpat, mexp, menv) ->
                         begin
-                            let pval = (evalExpr mex2 env) in
+                            let mval2 = evalExpr mex2 env in
                             match name with
-                            | Some s -> evalFunc mpat mexp (Env.add_binding s mval1 menv) pval
-                            | None -> evalFunc mpat mexp menv pval
+                            | Some s -> evalFunc mpat mexp (Env.add_binding s mval1 menv) mval2
+                            | None -> evalFunc mpat mexp menv mval2
                         end
                 | _ -> raise (DynamicTypeError "First expression is not a function")
             end
@@ -141,7 +141,6 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
                 | Some mex -> DataVal(s, Some (evalExpr mex env))
                 | None -> DataVal(s, None)
             end
-    | _ -> raise (ImplementMe "expression evaluation not implemented")
 
 
 (* Evaluate a declaration in the given environment.  Evaluation
@@ -151,6 +150,10 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
 let rec evalDecl (d:modecl) (env:moenv) : moresult =
   match d with
       (* a top-level expression has no name and is evaluated to a value *)
-      Expr(e) -> (None, evalExpr e env)
-    | _ -> raise (ImplementMe "let and let rec not implemented")
-
+    | Expr(e) -> (None, evalExpr e env)
+    | Let(s, mex) -> (Some s, evalExpr mex env)
+    | LetRec(s, mex) ->
+                match (evalExpr mex env) with
+                | FunctionVal(None, mpat, mex, menv) ->
+                        (Some s, FunctionVal(Some s, mpat, mex, menv))
+                | _ -> raise MatchFailure
