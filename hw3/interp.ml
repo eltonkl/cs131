@@ -1,11 +1,18 @@
-(* Name:
+(* Name: Elton Leong
 
    UID:
 
-   Others With Whom I Discussed Things:
+   Others With Whom I Discussed Things: Neda Vesselinova
+                                        Shalini Dangi
+                                        James Wang
 
    Other Resources I Consulted:
-   
+    http://caml.inria.fr/pub/docs/oreilly-book/html/book-ora016.html
+    http://caml.inria.fr/pub/docs/manual-ocaml/expr.html
+    http://stackoverflow.com/questions/257605/ocaml-match-expression-inside-another-one
+    http://ocaml-lib.sourceforge.net/doc/Option.html
+    https://realworldocaml.org/v1/en/html/error-handling.html
+    http://caml.inria.fr/pub/docs/manual-ocaml/libref/List.html
 *)
 
 (* EXCEPTIONS *)
@@ -46,7 +53,86 @@ let rec patMatch (pat:mopat) (value:movalue) : moenv =
 let rec evalExpr (e:moexpr) (env:moenv) : movalue =
   match e with
       (* an integer constant evaluates to itself *)
-    IntConst(i) -> IntVal(i)
+    | IntConst(i) -> IntVal(i)
+    | BoolConst(b) -> BoolVal(b)
+    | Var(s) ->
+            begin
+                try Env.lookup s env with
+                | Env.NotBound -> raise (DynamicTypeError "Unbound value")
+            end
+    | BinOp(moex1, mop, moex2) ->
+            let res1 = (evalExpr moex1 env) in
+            let res2 = (evalExpr moex2 env) in
+            begin
+                match (res1, res2) with
+                | (IntVal(i1), IntVal(i2)) ->
+                        begin
+                            match mop with
+                            | Plus -> IntVal(i1 + i2)
+                            | Minus -> IntVal(i1 - i2)
+                            | Times -> IntVal(i1 * i2)
+                            | Eq -> BoolVal(i1 = i2)
+                            | Gt -> BoolVal(i1 > i2)
+                        end
+                | _ -> raise (DynamicTypeError "Cannot apply a binary operator to a non-integer")
+            end
+    | Negate(moex) ->
+            begin
+                match (evalExpr moex env) with
+                | IntVal(i) -> IntVal(-1 * i)
+                | _ -> raise (DynamicTypeError "Cannot negate a non-integer value")
+            end
+    | If(ifexp, thenexp, elseexp) ->
+            begin
+                match (evalExpr ifexp env) with
+                | BoolVal(b) ->
+                        if b then evalExpr thenexp env
+                        else evalExpr elseexp env
+                | _ -> raise (DynamicTypeError "If expression does not return a boolean value")
+            end
+    | Function(mpat, moex) ->
+            begin
+                match mpat with
+                (* A function receives a copy of the environment surrounding it when it was evaluated *)
+                | VarPat(_) | TuplePat(_) -> FunctionVal(None, mpat, moex, env)
+                | _ -> raise (DynamicTypeError "Function parameter does not match a VarPat or TuplePat")
+            end
+    | FunctionCall(moex1, moex2) ->
+            begin
+                (* Bind, in menv, the given parameters as defined in mval to their names
+                 * as defined by the parameter pattern mpat *)
+                let rec bindInEnv menv mpat mval =
+                    match mpat with
+                    | VarPat(s) -> Env.add_binding s mval menv
+                    | TuplePat(patl) -> 
+                            begin
+                                match mval with
+                                | TupleVal(vall) ->
+                                        if (List.length patl) != (List.length vall) then
+                                            raise (DynamicTypeError "Tuple is not of the correct length")
+                                        else
+                                            List.fold_left2 bindToEnv menv patl vall
+                                | _ -> raise (DynamicTypeError "Tuple expected")
+                            end
+                    | _ -> raise (DynamicTypeError "This should never happen")
+                in
+                let evalFunc fpat fexp fenv pval =
+                    evalExpr fexp (bindInEnv fenv fpat pval)
+                in
+                let mval1 = evalExpr moex1 env in
+                match mval1 with
+                | FunctionVal(name, mpat, mexp, menv) ->
+                        begin
+                            let pval = (evalExpr moex2 env) in
+                            match name with
+                            | Some s -> evalFunc mpat mexp (Env.add_binding s mval1 menv) pval
+                            | None -> evalFunc mpat mexp menv pval
+                        end
+                | _ -> raise (DynamicTypeError "First expression is not a function")
+            end
+    (*| Match(mexp, l) -> *)
+    (* Use map to evaluate all mocaml expressions into values for the tuple *)
+    | Tuple(l) -> TupleVal(List.map (fun mexp -> evalExpr mexp env) l)
     | _ -> raise (ImplementMe "expression evaluation not implemented")
 
 
