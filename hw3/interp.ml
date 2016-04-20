@@ -131,8 +131,8 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
                         try (snd h, patMatch (fst h) mval) with
                         | MatchFailure -> tryMatch t
             in
-            let (mex, menv) = tryMatch l in
-            evalExpr mex menv
+            let (matex, matenv) = tryMatch l in
+            evalExpr matex (Env.combine_envs env matenv)
     (* Use map to evaluate all mocaml expressions into values for the tuple *)
     | Tuple(l) -> TupleVal(List.map (fun mex -> evalExpr mex env) l)
     | Data(s, o) ->
