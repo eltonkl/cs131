@@ -38,7 +38,7 @@ exception MatchFailure
    a match, raise the MatchFailure exception.
 *)
 let rec patMatch (pat:mopat) (value:movalue) : moenv =
-  match (pat, value) with
+    match (pat, value) with
       (* an integer pattern matches an integer only when they are the same constant;
 	 no variables are declared in the pattern so the returned environment is empty *)
     | (IntPat(i), IntVal(j)) when i = j -> Env.empty_env ()
@@ -64,7 +64,7 @@ let rec patMatch (pat:mopat) (value:movalue) : moenv =
    from continuing.
 *)
 let rec evalExpr (e:moexpr) (env:moenv) : movalue =
-  match e with
+    match e with
       (* an integer constant evaluates to itself *)
     | IntConst(i) -> IntVal(i)
     | BoolConst(b) -> BoolVal(b)
@@ -107,11 +107,11 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
                 (* A function receives a copy of the environment surrounding it when it was evaluated *)
                 FunctionVal(None, mpat, mex, env)
     | FunctionCall(mex1, mex2) ->
+            let evalFunc fpat fexp fenv pval =
+                evalExpr fexp (Env.combine_envs fenv (patMatch fpat pval))
+            in
+            let mval1 = evalExpr mex1 env in
             begin
-                let evalFunc fpat fexp fenv pval =
-                    evalExpr fexp (Env.combine_envs fenv (patMatch fpat pval))
-                in
-                let mval1 = evalExpr mex1 env in
                 match mval1 with
                 | FunctionVal(name, mpat, mexp, menv) ->
                         begin
@@ -136,11 +136,9 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
     (* Use map to evaluate all mocaml expressions into values for the tuple *)
     | Tuple(l) -> TupleVal(List.map (fun mex -> evalExpr mex env) l)
     | Data(s, o) ->
-            begin
-                match o with
-                | Some mex -> DataVal(s, Some (evalExpr mex env))
-                | None -> DataVal(s, None)
-            end
+            match o with
+            | Some mex -> DataVal(s, Some (evalExpr mex env))
+            | None -> DataVal(s, None)
 
 
 (* Evaluate a declaration in the given environment.  Evaluation
@@ -148,7 +146,7 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
    declaration along with the value of the declaration's expression.
 *)
 let rec evalDecl (d:modecl) (env:moenv) : moresult =
-  match d with
+    match d with
       (* a top-level expression has no name and is evaluated to a value *)
     | Expr(e) -> (None, evalExpr e env)
     | Let(s, mex) -> (Some s, evalExpr mex env)
