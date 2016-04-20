@@ -13,6 +13,7 @@
     http://ocaml-lib.sourceforge.net/doc/Option.html
     https://realworldocaml.org/v1/en/html/error-handling.html
     http://caml.inria.fr/pub/docs/manual-ocaml/libref/List.html
+    http://caml.inria.fr/pub/docs/manual-ocaml/libref/Pervasives.html
 *)
 
 (* EXCEPTIONS *)
@@ -40,10 +41,22 @@ let rec patMatch (pat:mopat) (value:movalue) : moenv =
   match (pat, value) with
       (* an integer pattern matches an integer only when they are the same constant;
 	 no variables are declared in the pattern so the returned environment is empty *)
-      (IntPat(i), IntVal(j)) when i=j -> Env.empty_env()
-    | _ -> raise (ImplementMe "pattern matching not implemented")
+    | (IntPat(i), IntVal(j)) when i = j -> Env.empty_env ()
+    | (BoolPat(i), BoolVal(j)) when i = j -> Env.empty_env ()
+    | (WildcardPat, _) -> Env.empty_env ()
+    | (VarPat(s), _) -> Env.add_binding s value (Env.empty_env ())
+    | (TuplePat(patl), TupleVal(vall)) when (List.length patl) = (List.length vall) ->
+            List.fold_left2
+            (fun menv mpat mval -> Env.combine_envs menv (patMatch mpat mval)) (Env.empty_env ()) patl vall
+    | (DataPat(i1, i2), DataVal(j1, j2)) when i1 = j1 ->
+            begin
+                match (i2, j2) with
+                | (Some mpat, Some mval) -> patMatch mpat mval
+                | (None, None) -> Env.empty_env ()
+                | _ -> raise MatchFailure
+            end
+    | _ -> raise MatchFailure
 
-    
 (* Evaluate an expression in the given environment and return the
    associated value.  Raise a MatchFailure if pattern matching fails.
    Raise a DynamicTypeError if any other kind of error occurs (e.g.,
@@ -60,9 +73,9 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
                 try Env.lookup s env with
                 | Env.NotBound -> raise (DynamicTypeError "Unbound value")
             end
-    | BinOp(moex1, mop, moex2) ->
-            let res1 = (evalExpr moex1 env) in
-            let res2 = (evalExpr moex2 env) in
+    | BinOp(mex1, mop, mex2) ->
+            let res1 = (evalExpr mex1 env) in
+            let res2 = (evalExpr mex2 env) in
             begin
                 match (res1, res2) with
                 | (IntVal(i1), IntVal(i2)) ->
@@ -76,9 +89,9 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
                         end
                 | _ -> raise (DynamicTypeError "Cannot apply a binary operator to a non-integer")
             end
-    | Negate(moex) ->
+    | Negate(mex) ->
             begin
-                match (evalExpr moex env) with
+                match (evalExpr mex env) with
                 | IntVal(i) -> IntVal(-1 * i)
                 | _ -> raise (DynamicTypeError "Cannot negate a non-integer value")
             end
@@ -90,49 +103,44 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
                         else evalExpr elseexp env
                 | _ -> raise (DynamicTypeError "If expression does not return a boolean value")
             end
-    | Function(mpat, moex) ->
-            begin
-                match mpat with
+    | Function(mpat, mex) ->
                 (* A function receives a copy of the environment surrounding it when it was evaluated *)
-                | VarPat(_) | TuplePat(_) -> FunctionVal(None, mpat, moex, env)
-                | _ -> raise (DynamicTypeError "Function parameter does not match a VarPat or TuplePat")
-            end
-    | FunctionCall(moex1, moex2) ->
+                FunctionVal(None, mpat, mex, env)
+    | FunctionCall(mex1, mex2) ->
             begin
-                (* Bind, in menv, the given parameters as defined in mval to their names
-                 * as defined by the parameter pattern mpat *)
-                let rec bindInEnv menv mpat mval =
-                    match mpat with
-                    | VarPat(s) -> Env.add_binding s mval menv
-                    | TuplePat(patl) -> 
-                            begin
-                                match mval with
-                                | TupleVal(vall) ->
-                                        if (List.length patl) != (List.length vall) then
-                                            raise (DynamicTypeError "Tuple is not of the correct length")
-                                        else
-                                            List.fold_left2 bindInEnv menv patl vall
-                                | _ -> raise (DynamicTypeError "Tuple expected")
-                            end
-                    | _ -> raise (DynamicTypeError "This should never happen")
-                in
                 let evalFunc fpat fexp fenv pval =
-                    evalExpr fexp (bindInEnv fenv fpat pval)
+                    evalExpr fexp (Env.combine_envs fenv (patMatch fpat pval))
                 in
-                let mval1 = evalExpr moex1 env in
+                let mval1 = evalExpr mex1 env in
                 match mval1 with
                 | FunctionVal(name, mpat, mexp, menv) ->
                         begin
-                            let pval = (evalExpr moex2 env) in
+                            let pval = (evalExpr mex2 env) in
                             match name with
                             | Some s -> evalFunc mpat mexp (Env.add_binding s mval1 menv) pval
                             | None -> evalFunc mpat mexp menv pval
                         end
                 | _ -> raise (DynamicTypeError "First expression is not a function")
             end
-    (*| Match(mexp, l) -> *)
+    | Match(mex, l) ->
+            let mval = (evalExpr mex env) in
+            let rec tryMatch l =
+                match l with
+                | [] -> raise MatchFailure
+                | h::t ->
+                        try (snd h, patMatch (fst h) mval) with
+                        | MatchFailure -> tryMatch t
+            in
+            let (mex, menv) = tryMatch l in
+            evalExpr mex menv
     (* Use map to evaluate all mocaml expressions into values for the tuple *)
-    | Tuple(l) -> TupleVal(List.map (fun mexp -> evalExpr mexp env) l)
+    | Tuple(l) -> TupleVal(List.map (fun mex -> evalExpr mex env) l)
+    | Data(s, o) ->
+            begin
+                match o with
+                | Some mex -> DataVal(s, Some (evalExpr mex env))
+                | None -> DataVal(s, None)
+            end
     | _ -> raise (ImplementMe "expression evaluation not implemented")
 
 
