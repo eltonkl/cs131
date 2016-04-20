@@ -111,7 +111,7 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
                                         if (List.length patl) != (List.length vall) then
                                             raise (DynamicTypeError "Tuple is not of the correct length")
                                         else
-                                            List.fold_left2 bindToEnv menv patl vall
+                                            List.fold_left2 bindInEnv menv patl vall
                                 | _ -> raise (DynamicTypeError "Tuple expected")
                             end
                     | _ -> raise (DynamicTypeError "This should never happen")
