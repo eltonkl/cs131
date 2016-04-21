@@ -14,6 +14,7 @@
     https://realworldocaml.org/v1/en/html/error-handling.html
     http://caml.inria.fr/pub/docs/manual-ocaml/libref/List.html
     http://caml.inria.fr/pub/docs/manual-ocaml/libref/Pervasives.html
+    http://caml.inria.fr/resources/doc/guides/debug.en.html
 *)
 
 (* EXCEPTIONS *)

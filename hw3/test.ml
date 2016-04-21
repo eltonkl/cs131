@@ -13,14 +13,21 @@
 
    call the function runtests() to run these tests
 *)
-let tests = [
+let tests =
+    [
     (* YOU NEED TO ADD A LOT MORE TESTS! *)
-		("3", "3"); 
-		("false", "false");
-		("let x = 34", "val x = 34");
-		("y", "dynamic type error");
-		("x + 4", "38")
-		]
+        ("3", "3");
+        ("false", "false");
+        ("let x = 34", "val x = 34");
+        ("y", "dynamic type error");
+        ("x + 4", "38");
+        ("match ((function x -> x + 3), (function x -> x + 5)) with (x, y) -> (x 6) + (y 7) | x -> x 5", "21");
+        ("let rec a (x, y) = match x with (c, d) -> c + d | Node -> Node y | z -> a y", "val a = <fun>");
+        ("a (Node, 5)", "Node 5");
+        ("a (5, 6)", "match failure");
+        ("a (5, (Node, 5))", "Node 5");
+        ("a (5, (5, ((5, 6), 0)))", "11");
+    ]
 
 (* The Test Harness
    You don't need to understand the code below.
