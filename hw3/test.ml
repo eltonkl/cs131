@@ -16,17 +16,43 @@
 let tests =
     [
     (* YOU NEED TO ADD A LOT MORE TESTS! *)
+        (* IntVal *)
         ("3", "3");
+        (* BoolVal *)
         ("false", "false");
+        (* let declaration *)
         ("let x = 34", "val x = 34");
+        (* Var *)
         ("y", "dynamic type error");
+        (* Var, IntVal, BinOp *)
         ("x + 4", "38");
+        (* Negate, IntVal *)
+        ("-5", "-5");
+        ("-(-5)", "5");
+        (* BinOp, IntVal, BoolVal *)
+        ("5 - 3", "2");
+        ("5 > 4", "true");
+        (* If, IntVal, BinOp, BoolVal *)
+        ("if 5 > 4 then 9 else 3", "9");
+        (* Data, Tuple *)
+        ("Node (Node 5, 6, Node 7)", "Node (Node 5, 6, Node 7)");
+        (* Match, Tuple, Function, FunctionCall, BinOp, Var *)
         ("match ((function x -> x + 3), (function x -> x + 5)) with (x, y) -> (x 6) + (y 7) | x -> x 5", "21");
+        (* let rec declaration, Match, Tuple, Data, Function, FunctionCall, Var *)
         ("let rec a (x, y) = match x with (c, d) -> c + d | Node -> Node y | z -> a y", "val a = <fun>");
+        (* Var, IntVal, Tuple, Data, FunctionCall *)
         ("a (Node, 5)", "Node 5");
+        (* "match failure" is expected because the recursive call to a will
+         * consist of (a 6), and 6 does not match the parameter for the
+         * function, as the function expects a tuple *)
         ("a (5, 6)", "match failure");
+        ("a (5, (5, 6))", "match failure");
         ("a (5, (Node, 5))", "Node 5");
         ("a (5, (5, ((5, 6), 0)))", "11");
+        (* Some Data tests *)
+        ("Node Node 5", "dynamic type error");
+        ("Node (Node 5)", "Node Node 5");
+        ("Node (function x -> x + 5)", "Node <fun>");
     ]
 
 (* The Test Harness

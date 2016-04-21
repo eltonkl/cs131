@@ -40,15 +40,22 @@ exception MatchFailure
 *)
 let rec patMatch (pat:mopat) (value:movalue) : moenv =
     match (pat, value) with
-      (* an integer pattern matches an integer only when they are the same constant;
+    (* an integer pattern matches an integer only when they are the same constant;
 	 no variables are declared in the pattern so the returned environment is empty *)
     | (IntPat(i), IntVal(j)) when i = j -> Env.empty_env ()
+    (* same thing but for boolean values *)
     | (BoolPat(i), BoolVal(j)) when i = j -> Env.empty_env ()
+    (* match whatever, don't insert a binding as there is no given name *)
     | (WildcardPat, _) -> Env.empty_env ()
+    (* create a name binding for s to the given value *)
     | (VarPat(s), _) -> Env.add_binding s value (Env.empty_env ())
+    (* bind all patterns in the TuplePat to all values in the TupleVal, as long as
+     * the TuplePat and TupleVal are of the same length (we want a surjective mapping) *)
     | (TuplePat(patl), TupleVal(vall)) when (List.length patl) = (List.length vall) ->
             List.fold_left2
             (fun menv mpat mval -> Env.combine_envs menv (patMatch mpat mval)) (Env.empty_env ()) patl vall
+    (* Can only match a DataPat to a DataVal if their Constructors are the same,
+     * and if their associated values can be matched together *)
     | (DataPat(i1, i2), DataVal(j1, j2)) when i1 = j1 ->
             begin
                 match (i2, j2) with
@@ -66,14 +73,19 @@ let rec patMatch (pat:mopat) (value:movalue) : moenv =
 *)
 let rec evalExpr (e:moexpr) (env:moenv) : movalue =
     match e with
-      (* an integer constant evaluates to itself *)
+    (* an integer constant evaluates to itself *)
     | IntConst(i) -> IntVal(i)
+    (* a bool constant evaluates to itself *)
     | BoolConst(b) -> BoolVal(b)
+    (* a var expression evaluates to the first thing found in the current
+     * environment with the given var name *)
     | Var(s) ->
             begin
                 try Env.lookup s env with
                 | Env.NotBound -> raise (DynamicTypeError "Unbound value")
             end
+    (* a BinOp is a binary operation on two integers
+     * 5 operations are supported: +, -, *, =, > *)
     | BinOp(mex1, mop, mex2) ->
             let res1 = (evalExpr mex1 env) in
             let res2 = (evalExpr mex2 env) in
@@ -90,12 +102,14 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
                         end
                 | _ -> raise (DynamicTypeError "Cannot apply a binary operator to a non-integer")
             end
+    (* Negation of expressions of the form mex: -(mex) *)
     | Negate(mex) ->
             begin
                 match (evalExpr mex env) with
-                | IntVal(i) -> IntVal(-1 * i)
+                | IntVal(i) -> IntVal(-i)
                 | _ -> raise (DynamicTypeError "Cannot negate a non-integer value")
             end
+    (* if (ifexp) then (thenexp) else (elseexp) *)
     | If(ifexp, thenexp, elseexp) ->
             begin
                 match (evalExpr ifexp env) with
@@ -104,9 +118,14 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
                         else evalExpr elseexp env
                 | _ -> raise (DynamicTypeError "If expression does not return a boolean value")
             end
+    (* function mpat -> mex *)
     | Function(mpat, mex) ->
                 (* A function receives a copy of the environment surrounding it when it was evaluated *)
                 FunctionVal(None, mpat, mex, env)
+    (* (mex1) (mex2)
+     * mex1 must evaluate to a function (it can be a Var expression, or a Function expression),
+     * then mex1 will then be called with (mex2) being bound to the pattern of the function, if
+     * the pattern and mex2 can be successfully pattern matched *)
     | FunctionCall(mex1, mex2) ->
             let evalFunc fpat fexp fenv pval =
                 evalExpr fexp (Env.combine_envs fenv (patMatch fpat pval))
@@ -118,11 +137,17 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
                         begin
                             let mval2 = evalExpr mex2 env in
                             match name with
+                            (* If the function is recursive, bind the function name
+                             * to its FunctionVal in the environment of the function *)
                             | Some s -> evalFunc mpat mexp (Env.add_binding s mval1 menv) mval2
                             | None -> evalFunc mpat mexp menv mval2
                         end
                 | _ -> raise (DynamicTypeError "First expression is not a function")
             end
+    (* match (mex) with (fst (List.head l)) -> (snd (List.head l)) | (fst (List.nth n l)) -> (snd (List.nth n l)) | ...
+     * where l is a (mopat * moexpr) list:
+     * if mex can be pattern matched to one of the patterns, then the
+     * match expression evaluates to the expression corresponding to the pattern *)
     | Match(mex, l) ->
             let mval = (evalExpr mex env) in
             let rec tryMatch l =
@@ -134,8 +159,15 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
             in
             let (matex, matenv) = tryMatch l in
             evalExpr matex (Env.combine_envs env matenv)
-    (* Use map to evaluate all mocaml expressions into values for the tuple *)
+    (* (mex1, mex2, ..., mexn)
+     * Evaluate all expressions into values for the tuple *)
     | Tuple(l) -> TupleVal(List.map (fun mex -> evalExpr mex env) l)
+    (* (Constructor) <- No associated expression
+     * (Constructor mex) <- (mex) associated with Constructor
+     * Data types in mocaml can be associated with any movalue, or none at all.
+     * This gives us the ability to do things like Node false "Node of BoolVal false",
+     * Node ((function x -> x + 5) 5), which evaluates to Node 10 "Node of IntVal 10",
+     * Node (Leaf 5) "Node of (Leaf of IntVal 5)", etc. *)
     | Data(s, o) ->
             match o with
             | Some mex -> DataVal(s, Some (evalExpr mex env))
@@ -148,11 +180,15 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
 *)
 let rec evalDecl (d:modecl) (env:moenv) : moresult =
     match d with
-      (* a top-level expression has no name and is evaluated to a value *)
+    (* a top-level expression has no name and is evaluated to a value *)
     | Expr(e) -> (None, evalExpr e env)
+    (* bind the evaluation of mex to s *)
     | Let(s, mex) -> (Some s, evalExpr mex env)
+    (* bind the evaluation of mex to s and register that it is a recursive
+     * function *)
     | LetRec(s, mex) ->
                 match (evalExpr mex env) with
                 | FunctionVal(None, mpat, mex, menv) ->
                         (Some s, FunctionVal(Some s, mpat, mex, menv))
+                (* This should never happen *)
                 | _ -> raise MatchFailure
