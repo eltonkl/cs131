@@ -191,4 +191,4 @@ let rec evalDecl (d:modecl) (env:moenv) : moresult =
                 | FunctionVal(None, mpat, mex, menv) ->
                         (Some s, FunctionVal(Some s, mpat, mex, menv))
                 (* This should never happen *)
-                | _ -> raise MatchFailure
+                | _ -> raise (DynamicTypeError "Cannot match FunctionVal for LetRec")
