@@ -167,7 +167,10 @@ class CalcTest {
         s.add("x");
         assert(s.contains("x"));
         assert(s.size() == 1);
-
+        s.add("a");
+        assert(s.contains("a"));
+        s.add("y");
+        assert(s.contains("y"));
 
         Set<String> t = new ListSet<String>((s1, s2) -> s2.compareTo(s1));
         assert(t.size() == 0);
@@ -178,6 +181,10 @@ class CalcTest {
         t.add("x");
         assert(t.contains("x"));
         assert(t.size() == 1);
+        t.add("a");
+        assert(t.contains("a"));
+        t.add("y");
+        assert(t.contains("y"));
     }
 }
 
@@ -249,12 +256,15 @@ class SElement implements SNode {
     public SNode getNext() { return next; }
     public int compareTo(String s) { return elem.compareTo(s); }
     public SNode add(String s) {
-        if (elem.compareTo(s) > 0) {
+        int result = elem.compareTo(s);
+        if (result > 0) {
             SElement next = new SElement(this.elem);
             this.elem = s;
             next.next = this.next;
             this.next = next;
         }
+        else if (result < 0)
+            next = next.add(s);
         return this;
     }
 }
@@ -325,12 +335,15 @@ class Element<T> implements Node<T> {
         return comparator.compare(elem, t);
     }
     public Node<T> add(T t, Comparator<T> comparator) {
-        if (comparator.compare(elem, t) > 0) {
+        int result = comparator.compare(elem, t);
+        if (result > 0) {
             Element<T> next = new Element<T>(this.elem);
             this.elem = t;
             next.next = this.next;
             this.next = next;
         }
+        else if (result < 0)
+            next = next.add(t, comparator);
         return this;
     }
 }
