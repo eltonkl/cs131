@@ -156,6 +156,28 @@ class CalcTest {
 
 	// a test for Problem 1c
 	assert(exp.compile().equals(is));
+
+        // Problem 2
+        StringSet s = new ListStringSet();
+        assert(s.size() == 0);
+        assert(!s.contains(""));
+        s.add("x");
+        assert(s.contains("x"));
+        assert(s.size() == 1);
+        s.add("x");
+        assert(s.contains("x"));
+        assert(s.size() == 1);
+
+
+        Set<String> t = new ListSet<String>((s1, s2) -> s2.compareTo(s1));
+        assert(t.size() == 0);
+        assert(!t.contains(""));
+        t.add("x");
+        assert(t.contains("x"));
+        assert(t.size() == 1);
+        t.add("x");
+        assert(t.contains("x"));
+        assert(t.size() == 1);
     }
 }
 
