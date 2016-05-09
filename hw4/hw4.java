@@ -164,27 +164,151 @@ class CalcTest {
 
 // the type for a set of strings
 interface StringSet {
-//     int size();
-//     boolean contains(String s);
-//     void add(String s);
+     int size();
+     boolean contains(String s);
+     void add(String s);
 }
 
 // an implementation of StringSet using a linked list
 class ListStringSet implements StringSet {
     protected SNode head;
+
+    public ListStringSet() { head = new SEmpty(); }
+
+    public int size() {
+        int size = 0;
+        SNode node = head;
+        while (!node.isEmpty()) {
+            size += 1;
+            node = node.getNext();
+        }
+        return size;
+    }
+
+    public boolean contains(String s) {
+        SNode node = head;
+        while (!node.isEmpty()) {
+            if (node.compareTo(s) == 0)
+                return true;
+            node = node.getNext();
+        }
+        return false;
+    }
+
+    public void add(String s) {
+        head = head.add(s);
+    }
 }
 
 // a type for the nodes of the linked list
 interface SNode {
+    boolean isEmpty();
+    SNode getNext();
+    int compareTo(String s);
+    SNode add(String s);
 }
 
 // represents an empty node (which ends a linked list)
 class SEmpty implements SNode {
+    public boolean isEmpty() { return true; }
+    public SNode getNext() { return new SEmpty(); }
+    public int compareTo(String s) { return -1; }
+    public SNode add(String s) { return new SElement(s); }
 }
 
 // represents a non-empty node
 class SElement implements SNode {
     protected String elem;
     protected SNode next;
+
+    public SElement(String s) { elem = s; next = new SEmpty(); }
+
+    public boolean isEmpty() { return false; }
+    public SNode getNext() { return next; }
+    public int compareTo(String s) { return elem.compareTo(s); }
+    public SNode add(String s) {
+        if (elem.compareTo(s) > 0) {
+            SElement next = new SElement(this.elem);
+            this.elem = s;
+            next.next = this.next;
+            this.next = next;
+        }
+        return this;
+    }
 }
 
+interface Set<T> {
+    int size();
+    boolean contains(T t);
+    void add(T t);
+}
+
+class ListSet<T> implements Set<T> {
+    protected Node<T> head;
+    protected Comparator<T> comparator;
+
+    public ListSet(Comparator<T> comparator) {
+        head = new Empty<T>();
+        this.comparator = comparator;
+    }
+
+    public int size() {
+        int size = 0;
+        Node<T> node = head;
+        while (!node.isEmpty()) {
+            size += 1;
+            node = node.getNext();
+        }
+        return size;
+    }
+
+    public boolean contains(T t) {
+        Node<T> node = head;
+        while (!node.isEmpty()) {
+            if (node.compareToWithComparator(t, comparator) == 0)
+                return true;
+            node = node.getNext();
+        }
+        return false;
+    }
+
+    public void add(T t) {
+        head = head.add(t, comparator);
+    }
+}
+
+interface Node<T> {
+    boolean isEmpty();
+    Node<T> getNext();
+    int compareToWithComparator(T t, Comparator<T> comparator);
+    Node<T> add(T t, Comparator<T> comparator);
+}
+
+class Empty<T> implements Node<T> {
+    public boolean isEmpty() { return true; }
+    public Node<T> getNext() { return new Empty<T>(); }
+    public int compareToWithComparator(T t, Comparator<T> comparator) { return -1; }
+    public Node<T> add(T t, Comparator<T> comparator) { return new Element<T>(t); }
+}
+
+class Element<T> implements Node<T> {
+    protected T elem;
+    protected Node<T> next;
+
+    public Element(T t) { elem = t; next = new Empty<T>(); }
+
+    public boolean isEmpty() { return false; }
+    public Node<T> getNext() { return next; }
+    public int compareToWithComparator(T t, Comparator<T> comparator) {
+        return comparator.compare(elem, t);
+    }
+    public Node<T> add(T t, Comparator<T> comparator) {
+        if (comparator.compare(elem, t) > 0) {
+            Element<T> next = new Element<T>(this.elem);
+            this.elem = t;
+            next.next = this.next;
+            this.next = next;
+        }
+        return this;
+    }
+}
