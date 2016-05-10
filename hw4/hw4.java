@@ -217,8 +217,11 @@ class ListStringSet implements StringSet {
     public boolean contains(String s) {
         SNode node = head;
         while (!node.isEmpty()) {
-            if (node.compareTo(s) == 0)
+            int result = node.compareTo(s);
+            if (result == 0)
                 return true;
+            else if (result > 0)
+                return false;
             node = node.getNext();
         }
         return false;
@@ -297,8 +300,11 @@ class ListSet<T> implements Set<T> {
     public boolean contains(T t) {
         Node<T> node = head;
         while (!node.isEmpty()) {
-            if (node.compareToWithComparator(t, comparator) == 0)
+            int result = node.compareToWithComparator(t, comparator);
+            if (result == 0)
                 return true;
+            else if (result > 0)
+                return false;
             node = node.getNext();
         }
         return false;
