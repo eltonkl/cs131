@@ -7,6 +7,8 @@ Others With Whom I Discussed Things:
 Other Resources I Consulted:
     https://docs.oracle.com/javase/8/docs/api/java/util/stream/package-summary.html
     http://www.programcreek.com/2014/01/convert-stream-to-array-in-java-8/
+    https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/RecursiveAction.html
+    http://stackoverflow.com/questions/5785745/make-copy-of-array-java
 */
 
 import java.io.*;
@@ -124,7 +126,9 @@ class PPMImage {
 
     // implement using Java's Fork/Join library
     public PPMImage mirrorImage() {
-        throw new ImplementMe();
+        PPMImage mirror = new PPMImage(width, height, maxColorVal, Arrays.copyOf(pixels, pixels.length));
+        new MirrorTask(mirror.pixels, width, 0, height).compute();
+        return mirror;
     }
 
     // implement using Java 8 Streams
@@ -137,6 +141,49 @@ class PPMImage {
         throw new ImplementMe();
     }
 
+}
+
+class Helpers {
+    public static void swapPixels(RGB[] pixels, int x, int y) {
+        System.out.println(x + " swap " + y);
+        RGB temp = pixels[x];
+        pixels[x] = pixels[y];
+        pixels[y] = temp;
+    }
+}
+
+class MirrorTask extends RecursiveAction {
+    private final RGB[] pixels;
+    private final int width;
+    private final int minHeight;
+    private final int maxHeight;
+    private final int SEQUENTIAL_CUTOFF = 10000;
+
+    public MirrorTask(RGB[] pixels, int width, int minHeight, int maxHeight) {
+        this.pixels = pixels;
+        this.width = width;
+        this.minHeight = minHeight;
+        this.maxHeight = maxHeight;
+    }
+
+    public void compute() {
+        if ((maxHeight - minHeight) * width > SEQUENTIAL_CUTOFF) {
+            int mid = minHeight + (maxHeight - minHeight) / 2;
+            System.out.println(minHeight + " " + mid + " " + maxHeight);
+            MirrorTask left = new MirrorTask(pixels, width, minHeight, mid);
+            MirrorTask right = new MirrorTask(pixels, width, mid, maxHeight);
+            right.fork();
+            left.compute();
+            right.join();
+        }
+        else {
+            for (int i = minHeight; i < maxHeight; i++) {
+                for (int j = 0; j < width/2; j++) {
+                    Helpers.swapPixels(pixels, (i * width) + j, (((i + 1) * width) - 1) - j);
+                }
+            }
+        }
+    }
 }
 
 // code for creating a Gaussian filter
@@ -167,5 +214,3 @@ class Gaussian {
         return kernel2d;
     }
 }
-
-
