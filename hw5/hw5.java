@@ -145,7 +145,6 @@ class PPMImage {
 
 class Helpers {
     public static void swapPixels(RGB[] pixels, int x, int y) {
-        System.out.println(x + " swap " + y);
         RGB temp = pixels[x];
         pixels[x] = pixels[y];
         pixels[y] = temp;
@@ -169,7 +168,6 @@ class MirrorTask extends RecursiveAction {
     public void compute() {
         if ((maxHeight - minHeight) * width > SEQUENTIAL_CUTOFF) {
             int mid = minHeight + (maxHeight - minHeight) / 2;
-            System.out.println(minHeight + " " + mid + " " + maxHeight);
             MirrorTask left = new MirrorTask(pixels, width, minHeight, mid);
             MirrorTask right = new MirrorTask(pixels, width, mid, maxHeight);
             right.fork();
