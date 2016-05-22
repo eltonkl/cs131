@@ -5,10 +5,13 @@ UID:
 Others With Whom I Discussed Things:
 
 Other Resources I Consulted:
-
+    https://docs.oracle.com/javase/8/docs/api/java/util/stream/package-summary.html
+    http://www.programcreek.com/2014/01/convert-stream-to-array-in-java-8/
 */
 
 import java.io.*;
+import java.util.Arrays;
+import java.util.concurrent.*;
 
 // a marker for code that you need to implement
 class ImplementMe extends RuntimeException {}
@@ -103,12 +106,20 @@ class PPMImage {
 
     // implement using Java 8 Streams
     public PPMImage negate() {
-        throw new ImplementMe();
+        RGB[] newPixels = Arrays.stream(pixels).parallel()
+            .map(pix -> new RGB(maxColorVal - pix.R, maxColorVal - pix.G, maxColorVal - pix.B))
+            .toArray(RGB[]::new);
+        return new PPMImage(width, height, maxColorVal, newPixels);
     }
 
     // implement using Java 8 Streams
     public PPMImage greyscale() {
-        throw new ImplementMe();
+        RGB[] newPixels = Arrays.stream(pixels).parallel()
+            .map(pix -> {
+                int avg = Math.round(.299f * pix.R + .587f * pix.G + .114f * pix.B);
+                return new RGB(avg, avg, avg);
+            }).toArray(RGB[]::new);
+        return new PPMImage(width, height, maxColorVal, newPixels);
     }    
 
     // implement using Java's Fork/Join library
