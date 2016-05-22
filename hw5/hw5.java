@@ -14,6 +14,7 @@ Other Resources I Consulted:
 import java.io.*;
 import java.util.Arrays;
 import java.util.concurrent.*;
+import java.util.stream.*;
 
 // a marker for code that you need to implement
 class ImplementMe extends RuntimeException {}
@@ -133,14 +134,21 @@ class PPMImage {
 
     // implement using Java 8 Streams
     public PPMImage mirrorImage2() {
-        throw new ImplementMe();
+        RGB[] mirror = Arrays.copyOf(pixels, pixels.length);
+        IntStream.range(0, height).parallel().forEach(curHeight -> {
+            int left = curHeight * width;
+            int right = ((curHeight + 1) * width) - 1;
+            for (int i = 0; i < width/2; i++) {
+                Helpers.swapPixels(mirror, left + i, right - i);
+            }
+        });
+        return new PPMImage(width, height, maxColorVal, mirror);
     }
 
     // implement using Java's Fork/Join library
     public PPMImage gaussianBlur(int radius, double sigma) {
         throw new ImplementMe();
     }
-
 }
 
 class Helpers {
@@ -156,7 +164,7 @@ class MirrorTask extends RecursiveAction {
     private final int width;
     private final int minHeight;
     private final int maxHeight;
-    private final int SEQUENTIAL_CUTOFF = 10000;
+    private final int SEQUENTIAL_CUTOFF = 25000;
 
     public MirrorTask(RGB[] pixels, int width, int minHeight, int maxHeight) {
         this.pixels = pixels;
@@ -176,8 +184,10 @@ class MirrorTask extends RecursiveAction {
         }
         else {
             for (int i = minHeight; i < maxHeight; i++) {
+                int left = i * width;
+                int right = ((i + 1) * width) - 1;
                 for (int j = 0; j < width/2; j++) {
-                    Helpers.swapPixels(pixels, (i * width) + j, (((i + 1) * width) - 1) - j);
+                    Helpers.swapPixels(pixels, left + j, right - j);
                 }
             }
         }
