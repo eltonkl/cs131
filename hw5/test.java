@@ -32,7 +32,7 @@ class Tester {
         mirror2.toFile("florencemi2.ppm");
 
         time0 = System.nanoTime();
-        PPMImage gb1 = img.gaussianBlur(30, 0.5);
+        PPMImage gb1 = img.gaussianBlur(60, 2);
         time1 = System.nanoTime();
         System.out.println("GB1:       " + (time1 - time0)/1000000000.);
         gb1.toFile("florencegb1.ppm");

@@ -147,15 +147,50 @@ class PPMImage {
 
     // implement using Java's Fork/Join library
     public PPMImage gaussianBlur(int radius, double sigma) {
-        throw new ImplementMe();
+        RGB[] dest = new RGB[pixels.length];
+        for (int i = 0; i < dest.length; i++) {
+            dest[i] = new RGB(0, 0, 0);
+        }
+        double[][] filter = Gaussian.gaussianFilter(radius, sigma);
+        new GaussianTask(this.pixels, dest, filter, width, height, 0, height).compute();
+        return new PPMImage(width, height, maxColorVal, dest);
     }
 }
 
 class Helpers {
-    public static void swapPixels(RGB[] pixels, int x, int y) {
+    protected static void swapPixels(RGB[] pixels, int x, int y) {
         RGB temp = pixels[x];
         pixels[x] = pixels[y];
         pixels[y] = temp;
+    }
+
+    protected static int clamp(int cur, int min, int max) {
+        if (cur < min)
+            return min;
+        else if (cur > max)
+            return max;
+        return cur;
+    }
+
+    protected static void applyGaussian(RGB[] source, RGB[] dest, double[][] filter, int x, int y, int width, int height) {
+        int mid = filter.length / 2;
+        double R = 0;
+        double G = 0;
+        double B = 0;
+
+        for (int i = 0; i < filter.length; i++) {
+            int clampX = clamp(x - (mid - i), 0, width - 1);
+            for (int j = 0; j < filter[i].length; j++) {
+                int clampY = clamp(y - (mid - j), 0, height - 1);
+                R += filter[i][j] * source[clampY * width + clampX].R;
+                G += filter[i][j] * source[clampY * width + clampX].G;
+                B += filter[i][j] * source[clampY * width + clampX].B;
+            }
+        }
+
+        dest[y * width + x].R = new Long(Math.round(R)).intValue();
+        dest[y * width + x].G = new Long(Math.round(G)).intValue();
+        dest[y * width + x].B = new Long(Math.round(B)).intValue();
     }
 }
 
@@ -194,9 +229,47 @@ class MirrorTask extends RecursiveAction {
     }
 }
 
+class GaussianTask extends RecursiveAction {
+    private final RGB[] source;
+    private final RGB[] dest;
+    private final double[][] filter;
+    private final int width;
+    private final int height;
+    private final int minHeight;
+    private final int maxHeight;
+    private final int SEQUENTIAL_CUTOFF = 5000;
+
+    public GaussianTask(RGB[] source, RGB[] dest, double[][] filter, int width, int height, int minHeight, int maxHeight) {
+        this.source = source;
+        this.dest = dest;
+        this.filter = filter;
+        this.width = width;
+        this.height = height;
+        this.minHeight = minHeight;
+        this.maxHeight = maxHeight;
+    }
+
+    public void compute() {
+        if ((maxHeight - minHeight) * width > SEQUENTIAL_CUTOFF) {
+            int mid = minHeight + (maxHeight - minHeight) / 2;
+            GaussianTask left = new GaussianTask(source, dest, filter, width, height, minHeight, mid);
+            GaussianTask right = new GaussianTask(source, dest, filter, width, height, mid, maxHeight);
+            right.fork();
+            left.compute();
+            right.join();
+        }
+        else {
+            for (int i = minHeight; i < maxHeight; i++) {
+                for (int j = 0; j < width; j++) {
+                    Helpers.applyGaussian(source, dest, filter, j, i, width, height);
+                }
+            }
+        }
+    }
+}
+
 // code for creating a Gaussian filter
 class Gaussian {
-
     protected static double gaussian(int x, int mu, double sigma) {
         return Math.exp( -(Math.pow((x-mu)/sigma,2.0))/2.0 );
     }
