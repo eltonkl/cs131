@@ -110,6 +110,7 @@ class PPMImage {
 
     // implement using Java 8 Streams
     public PPMImage negate() {
+        // Split image by pixels
         RGB[] newPixels = Arrays.stream(pixels).parallel()
             .map(pix -> new RGB(maxColorVal - pix.R, maxColorVal - pix.G, maxColorVal - pix.B))
             .toArray(RGB[]::new);
@@ -118,6 +119,7 @@ class PPMImage {
 
     // implement using Java 8 Streams
     public PPMImage greyscale() {
+        // Split image by pixels
         RGB[] newPixels = Arrays.stream(pixels).parallel()
             .map(pix -> {
                 int avg = new Long(Math.round(.299 * pix.R + .587 * pix.G + .114 * pix.B)).intValue();
@@ -136,6 +138,7 @@ class PPMImage {
     // implement using Java 8 Streams
     public PPMImage mirrorImage2() {
         RGB[] mirror = Arrays.copyOf(pixels, pixels.length);
+        // Split up the image by row
         IntStream.range(0, height).parallel().forEach(curHeight -> {
             int left = curHeight * width;
             int right = ((curHeight + 1) * width) - 1;
@@ -216,6 +219,7 @@ class MirrorTask extends RecursiveAction {
 
     public void compute() {
         // Only want to process ceil(num_pixels/SEQUENTIAL_CUTOFF) * SEQUENTIAL_CUTOFF or less pixels in this thread
+        // Each thread will do a certain number of rows of the image
         if ((maxHeight - minHeight) * width > SEQUENTIAL_CUTOFF) {
             int mid = minHeight + (maxHeight - minHeight) / 2;
             // The right side is processed in a forked task

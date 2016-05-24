@@ -18,6 +18,8 @@ class Tester {
         System.out.println("Greyscale: " + (time1 - time0)/1000000000.);
         greyscale.toFile("florencegs.ppm");
 
+        greyscale.greyscale().toFile("florencegsgs.ppm");
+
         time0 = System.nanoTime();
         PPMImage mirror = img.mirrorImage();
         time1 = System.nanoTime();
