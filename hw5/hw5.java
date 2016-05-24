@@ -4,12 +4,12 @@ UID:
 
 Others With Whom I Discussed Things:
 
-
 Other Resources I Consulted:
     https://docs.oracle.com/javase/8/docs/api/java/util/stream/package-summary.html
     http://www.programcreek.com/2014/01/convert-stream-to-array-in-java-8/
     https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/RecursiveAction.html
     http://stackoverflow.com/questions/5785745/make-copy-of-array-java
+    https://docs.oracle.com/javase/8/docs/api/java/util/stream/IntStream.html
     https://docs.oracle.com/javase/7/docs/api/java/lang/Long.html
 */
 
@@ -32,7 +32,6 @@ class RGB {
     }
 
     public String toString() { return "(" + R + "," + G + "," + B + ")"; }
-
 }
 
 
@@ -121,7 +120,7 @@ class PPMImage {
     public PPMImage greyscale() {
         RGB[] newPixels = Arrays.stream(pixels).parallel()
             .map(pix -> {
-                int avg = Math.round(.299f * pix.R + .587f * pix.G + .114f * pix.B);
+                int avg = new Long(Math.round(.299 * pix.R + .587 * pix.G + .114 * pix.B)).intValue();
                 return new RGB(avg, avg, avg);
             }).toArray(RGB[]::new);
         return new PPMImage(width, height, maxColorVal, newPixels);
@@ -140,6 +139,8 @@ class PPMImage {
         IntStream.range(0, height).parallel().forEach(curHeight -> {
             int left = curHeight * width;
             int right = ((curHeight + 1) * width) - 1;
+            // Since we're mirroring the image, swap a column from the left half with one from the right half
+            // If we went past width/2, then we would mirror the image and then mirror it again, resulting in the original image
             for (int i = 0; i < width/2; i++) {
                 Helpers.swapPixels(mirror, left + i, right - i);
             }
@@ -150,6 +151,7 @@ class PPMImage {
     // implement using Java's Fork/Join library
     public PPMImage gaussianBlur(int radius, double sigma) {
         RGB[] dest = new RGB[pixels.length];
+        // Allocate and zero out the pixels of the blurred image
         for (int i = 0; i < dest.length; i++) {
             dest[i] = new RGB(0, 0, 0);
         }
@@ -166,6 +168,7 @@ class Helpers {
         pixels[y] = temp;
     }
 
+    // Clamps value to range [min, max]
     protected static int clamp(int cur, int min, int max) {
         if (cur < min)
             return min;
@@ -174,6 +177,7 @@ class Helpers {
         return cur;
     }
 
+    // Applies given Gaussian filter to the dest (x, y)
     protected static void applyGaussian(RGB[] source, RGB[] dest, double[][] filter, int x, int y, int width, int height) {
         int mid = filter.length / 2;
         double R = 0;
@@ -211,8 +215,10 @@ class MirrorTask extends RecursiveAction {
     }
 
     public void compute() {
+        // Only want to process ceil(num_pixels/SEQUENTIAL_CUTOFF) * SEQUENTIAL_CUTOFF or less pixels in this thread
         if ((maxHeight - minHeight) * width > SEQUENTIAL_CUTOFF) {
             int mid = minHeight + (maxHeight - minHeight) / 2;
+            // The right side is processed in a forked task
             MirrorTask left = new MirrorTask(pixels, width, minHeight, mid);
             MirrorTask right = new MirrorTask(pixels, width, mid, maxHeight);
             right.fork();
@@ -223,6 +229,8 @@ class MirrorTask extends RecursiveAction {
             for (int i = minHeight; i < maxHeight; i++) {
                 int left = i * width;
                 int right = ((i + 1) * width) - 1;
+                // Since we're mirroring the image, swap a column from the left half with one from the right half
+                // If we went past width/2, then we would mirror the image and then mirror it again, resulting in the original image
                 for (int j = 0; j < width/2; j++) {
                     Helpers.swapPixels(pixels, left + j, right - j);
                 }
@@ -252,6 +260,7 @@ class GaussianTask extends RecursiveAction {
     }
 
     public void compute() {
+        // Same idea as MirrorTask
         if ((maxHeight - minHeight) * width > SEQUENTIAL_CUTOFF) {
             int mid = minHeight + (maxHeight - minHeight) / 2;
             GaussianTask left = new GaussianTask(source, dest, filter, width, height, minHeight, mid);
