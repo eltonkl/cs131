@@ -39,6 +39,21 @@ verbalarithmetic([All1|AllT], [Term1|Term1T], [Term2|Term2T], [Sum|SumT]) :-
     fd_domain([All1|AllT], 0, 9),
     /* As sum/5 expects numbers in the opposite order, reverse the lists */
     reverse([Term1|Term1T], T1), reverse([Term2|Term2T], T2), reverse([Sum|SumT], S),
+    /* word1 + word2 = word3 */
     sum(T1, T2, S, 0, 0),
     /* Need a value to actually be assigned to all of the variables  */
     fd_labeling([All1|AllT]).
+
+/* Limiting A, B, and C from being none significantly speeds up the evaluation */
+move(world([A|AT], B, C, none), pickup(A, stack1), world(AT, B, C, A)) :- A \== none.
+move(world(A, [B|BT], C, none), pickup(B, stack2), world(A, BT, C, B)) :- B \== none.
+move(world(A, B, [C|CT], none), pickup(C, stack3), world(A, B, CT, C)) :- C \== none.
+
+move(world(AT, B, C, A), putdown(A, stack1), world([A|AT], B, C, none)) :- A \== none.
+move(world(A, BT, C, B), putdown(B, stack2), world(A, [B|BT], C, none)) :- B \== none.
+move(world(A, B, CT, C), putdown(C, stack3), world(A, B, [C|CT], none)) :- C \== none.
+
+blocksworld(world(A, B, C, D), [], world(A, B, C, D)).
+blocksworld(world(A, B, C, D), [Action|T], world(A2, B2, C2, D2)) :-
+    move(world(A, B, C, D), Action, world(AB, BB, CB, DB)),
+    blocksworld(world(AB, BB, CB, DB), T, world(A2, B2, C2, D2)).
